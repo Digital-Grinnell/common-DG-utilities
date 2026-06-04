@@ -502,3 +502,103 @@ def validate_csv_headings(csv_file_path, mode):
             
     except Exception as e:
         return (False, [], f"Error validating CSV headings: {str(e)}")
+
+# MIME type mapping
+# ----------------------------------------------------------------------
+def get_mime_type(filename):
+    """
+    Get the MIME type for a file based on its extension.
+    
+    Args:
+        filename (str): The filename or path to check
+        
+    Returns:
+        str: MIME type string (e.g., 'image/jpeg', 'application/pdf')
+             Returns 'application/octet-stream' for unknown types
+    
+    Example:
+        >>> get_mime_type('photo.jpg')
+        'image/jpeg'
+        >>> get_mime_type('document.pdf')
+        'application/pdf'
+        >>> get_mime_type('video.mp4')
+        'video/mp4'
+    """
+    import os
+    
+    # Get extension (lowercase, without the dot)
+    ext = os.path.splitext(filename)[1].lower().lstrip('.')
+    
+    # Comprehensive MIME type mapping
+    mime_types = {
+        # Images
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'bmp': 'image/bmp',
+        'tif': 'image/tiff',
+        'tiff': 'image/tiff',
+        'svg': 'image/svg+xml',
+        'webp': 'image/webp',
+        'ico': 'image/x-icon',
+        
+        # Documents
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt': 'application/vnd.ms-powerpoint',
+        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'odt': 'application/vnd.oasis.opendocument.text',
+        'ods': 'application/vnd.oasis.opendocument.spreadsheet',
+        'odp': 'application/vnd.oasis.opendocument.presentation',
+        
+        # Text
+        'txt': 'text/plain',
+        'csv': 'text/csv',
+        'html': 'text/html',
+        'htm': 'text/html',
+        'xml': 'application/xml',
+        'json': 'application/json',
+        'md': 'text/markdown',
+        'rtf': 'application/rtf',
+        
+        # Audio
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'ogg': 'audio/ogg',
+        'flac': 'audio/flac',
+        'm4a': 'audio/mp4',
+        'aac': 'audio/aac',
+        'wma': 'audio/x-ms-wma',
+        
+        # Video
+        'mp4': 'video/mp4',
+        'avi': 'video/x-msvideo',
+        'mov': 'video/quicktime',
+        'wmv': 'video/x-ms-wmv',
+        'flv': 'video/x-flv',
+        'mkv': 'video/x-matroska',
+        'webm': 'video/webm',
+        'mpg': 'video/mpeg',
+        'mpeg': 'video/mpeg',
+        
+        # Archives
+        'zip': 'application/zip',
+        'tar': 'application/x-tar',
+        'gz': 'application/gzip',
+        'bz2': 'application/x-bzip2',
+        'rar': 'application/vnd.rar',
+        '7z': 'application/x-7z-compressed',
+        
+        # Other
+        'js': 'application/javascript',
+        'css': 'text/css',
+        'py': 'text/x-python',
+        'sh': 'application/x-sh',
+        'exe': 'application/x-msdownload',
+    }
+    
+    return mime_types.get(ext, 'application/octet-stream')
