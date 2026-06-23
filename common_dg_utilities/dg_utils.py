@@ -8,7 +8,7 @@ import time
 
 # Unique ID generation
 # ----------------------------------------------------------------------
-def generate_unique_id(page):
+def generate_unique_id(page, prefix=""):
     """
     Generate a unique ID based on current epoch time.
     Checks session storage to ensure no duplicates exist.
@@ -16,26 +16,34 @@ def generate_unique_id(page):
     
     Args:
         page: The Flet page object containing session data
+        prefix: Optional prefix to prepend before the standard dg_ ID.
     
     Returns:
-        str: Unique ID formatted as "dg_<epoch_time>"
+        str: Unique ID formatted as "dg_<epoch_time>" or
+             "<prefix>_dg_<epoch_time>" when prefix is supplied.
     
     Example:
         >>> generate_unique_id(page)
         'dg_1729123456'
+        >>> generate_unique_id(page, prefix="tdps")
+        'tdps_dg_1729123456'
     """
     # Initialize the set of generated IDs in session if not present
     if not hasattr(page.session, 'generated_ids'):
         page.session.generated_ids = set()
+
+    normalized_prefix = str(prefix or "").strip().rstrip("_")
     
     # Start with current epoch time
     epoch_time = int(time.time())
-    unique_id = f"dg_{epoch_time}"
+    base_id = f"dg_{epoch_time}"
+    unique_id = f"{normalized_prefix}_{base_id}" if normalized_prefix else base_id
     
     # Increment until we find a unique ID
     while unique_id in page.session.generated_ids:
         epoch_time += 1
-        unique_id = f"dg_{epoch_time}"
+        base_id = f"dg_{epoch_time}"
+        unique_id = f"{normalized_prefix}_{base_id}" if normalized_prefix else base_id
     
     # Store the new ID in session
     page.session.generated_ids.add(unique_id)

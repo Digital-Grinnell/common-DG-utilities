@@ -4,7 +4,7 @@ Shared utilities for Digital Grinnell Flet-based applications.
 
 ## Features
 
-- **Unique ID Generation**: Generate epoch-based unique IDs with `dg_` prefix
+- **Unique ID Generation**: Generate epoch-based unique IDs in `dg_<epoch>` form, with optional `<prefix>_dg_<epoch>` support
 - **String Similarity**: Calculate similarity between strings for fuzzy matching
 - **Filename Sanitization**: Clean and sanitize filenames
 - **Fuzzy Search**: Search for files with fuzzy matching capabilities
@@ -26,12 +26,16 @@ from common_dg_utilities import generate_unique_id
 
 # Generate a unique ID
 unique_id = generate_unique_id(page)  # Returns: dg_1234567890
+
+# Generate a prefixed unique ID
+prefixed_id = generate_unique_id(page, prefix="tdps")  # Returns: tdps_dg_1234567890
 ```
 
 ## Functions
 
-### `generate_unique_id(page)`
+### `generate_unique_id(page, prefix="")`
 Generate a unique ID based on current epoch time with `dg_` prefix.
+When `prefix` is supplied, the result becomes `<prefix>_dg_<epoch>`.
 Prevents duplicates by checking session storage.
 
 ### `calculate_string_similarity(str1, str2)`
