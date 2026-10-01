@@ -5,6 +5,9 @@ Shared utilities for Flet-based Digital Grinnell applications.
 
 from .dg_utils import (
     generate_unique_id,
+    is_valid_key,
+    extract_key,
+    ensure_key,
     calculate_string_similarity,
     sanitize_filename,
     perform_fuzzy_search,
@@ -20,6 +23,9 @@ from .dg_utils import (
 __version__ = "0.1.0"
 __all__ = [
     "generate_unique_id",
+    "is_valid_key",
+    "extract_key",
+    "ensure_key",
     "calculate_string_similarity",
     "sanitize_filename",
     "perform_fuzzy_search",

@@ -5,6 +5,7 @@ import json
 import sys
 import logging
 import time
+import re
 
 # Unique ID generation
 # ----------------------------------------------------------------------
@@ -49,6 +50,144 @@ def generate_unique_id(page, prefix=""):
     page.session.generated_ids.add(unique_id)
     
     return unique_id
+
+# 'key' field management
+# ----------------------------------------------------------------------
+# Rules for 'key' management:
+#   1. A 'key' value always contains a 'dg_<epoch_time>' string as generated
+#      by generate_unique_id().
+#   2. To help ensure EVERY 'key' is universally unique there may be a <slug>
+#      or <prefix> value before the 'dg_' with an underscore separator, e.g.
+#      'tdps_dg_1729123456'.
+#   3. Any record or filename that contains a 'dg_<epoch_time>' value or
+#      fragment in ANY field MUST maintain that 'key' value throughout its life.
+
+# Matches 'dg_<digits>' optionally preceded by '<slug>_' where the slug
+# contains letters, digits, or hyphens.
+KEY_REGEX = re.compile(r"(?:[A-Za-z0-9][A-Za-z0-9-]*_)?dg_\d+")
+
+
+def is_valid_key(value):
+    """
+    Check whether a value is a valid 'key' string.
+
+    A valid key is exactly 'dg_<epoch_time>' or '<slug>_dg_<epoch_time>'
+    where <slug> contains only letters, digits, or hyphens.
+
+    Args:
+        value: The value to check (non-string values are coerced with str()).
+
+    Returns:
+        bool: True if the value exactly matches the key pattern.
+
+    Example:
+        >>> is_valid_key('dg_1729123456')
+        True
+        >>> is_valid_key('tdps_dg_1729123456')
+        True
+        >>> is_valid_key('photo dg_1729123456.jpg')
+        False
+    """
+    if value is None:
+        return False
+    return KEY_REGEX.fullmatch(str(value).strip()) is not None
+
+
+def extract_key(text):
+    """
+    Find and return the first 'key' fragment embedded in arbitrary text.
+
+    Searches for 'dg_<epoch_time>' optionally preceded by '<slug>_'.  Works on
+    any CSV field value or filename.  When a word immediately precedes 'dg_'
+    with an underscore separator it is treated as the slug and included in the
+    returned fragment (the longest valid key fragment is maintained).
+
+    Args:
+        text: The text to search.
+
+    Returns:
+        str or None: The matched key fragment (e.g. 'dg_1729123456' or
+        'tdps_dg_1729123456'), or None if no fragment is present.
+
+    Example:
+        >>> extract_key('photo tdps_dg_1729123456.jpg')
+        'tdps_dg_1729123456'
+        >>> extract_key('scan_dg_1729123456.tif')
+        'scan_dg_1729123456'
+        >>> extract_key('no key here') is None
+        True
+    """
+    if text is None:
+        return None
+    match = KEY_REGEX.search(str(text))
+    return match.group(0) if match else None
+
+
+def ensure_key(record, page=None, slug="", filename=None, key_field="key"):
+    """
+    Enforce 'key' management rules for a CSV record (a mutable mapping such as
+    a dict of field names to values).  The record is updated in place and the
+    enforced key is returned.
+
+    Rules enforced, in order:
+      1. If record[key_field] is already a valid key, it is kept unchanged.
+      2. Otherwise every field of the record (and `filename`, if given) is
+         scanned for an embedded 'dg_<epoch_time>' fragment; the first
+         fragment found becomes the key so the value is maintained throughout
+         the record's life.
+      3. Otherwise a new key is minted with generate_unique_id() (using `page`
+         for session de-duplication when available) and the optional `slug`.
+
+    Args:
+        record (dict): Mutable mapping of CSV field names to values.
+        page: Optional Flet page object; passed to generate_unique_id() so new
+              keys are de-duplicated within the session.
+        slug (str): Optional slug/prefix applied only when a NEW key is
+                    generated, e.g. 'tdps' produces 'tdps_dg_<epoch>'.
+        filename (str): Optional filename associated with the record; scanned
+                        for a key fragment before a new key is generated.
+        key_field (str): Name of the key column. Defaults to 'key'.
+
+    Returns:
+        str: The enforced key value.
+
+    Example:
+        >>> row = {'filename': 'scan dg_1729123456.tif', 'title': 'Photo'}
+        >>> ensure_key(row)
+        'dg_1729123456'
+        >>> row['key']
+        'dg_1729123456'
+    """
+    # Rule 1 - an existing valid key MUST be maintained
+    existing = record.get(key_field)
+    if is_valid_key(existing):
+        return str(existing).strip()
+
+    # Rule 2 - maintain any dg_<epoch_time> fragment found in any field
+    # (including a malformed key field) or in the associated filename
+    search_values = list(record.values())
+    if filename:
+        search_values.append(filename)
+    for value in search_values:
+        fragment = extract_key(value)
+        if fragment:
+            record[key_field] = fragment
+            logging.info(f"Maintained existing key '{fragment}' in field '{key_field}'")
+            return fragment
+
+    # Rule 3 - mint a brand-new key
+    if page is not None:
+        new_key = generate_unique_id(page, prefix=slug)
+    else:
+        normalized_slug = str(slug or "").strip().rstrip("_")
+        base_id = f"dg_{int(time.time())}"
+        new_key = f"{normalized_slug}_{base_id}" if normalized_slug else base_id
+        logging.warning("ensure_key() minted a key without a page session; "
+                        "uniqueness is not de-duplicated across the session")
+
+    record[key_field] = new_key
+    logging.info(f"Generated new key '{new_key}' in field '{key_field}'")
+    return new_key
 
 # Simple string matching functions
 # ----------------------------------------------------------------------
